@@ -35,6 +35,8 @@ namespace NControl.Controls
 		/// </summary>
 		private readonly Grid _contentView;
 
+	    private ScrollView _scrollPage;
+
 		/// <summary>
 		/// The button stack.
 		/// </summary>
@@ -48,21 +50,26 @@ namespace NControl.Controls
 		/// <summary>
 		/// The layout.
 		/// </summary>
-		private readonly RelativeLayout _mainLayout;
+		private readonly Grid _mainLayout;
 
 		/// <summary>
 		/// The shadow.
 		/// </summary>
 		private readonly NControlView _shadow;
 
-		#endregion
+	    private double _distanceX;
+        private double _startX;
 
-		#region Events
+        #endregion
 
-		/// <summary>
-		/// Occurs when tab activated.
-		/// </summary>
-		public event EventHandler<int> TabActivated;
+        #region Events
+
+        /// <summary>
+        /// Occurs when tab activated.
+        /// </summary>
+        public event EventHandler<int> TabActivated;
+
+
 
 		#endregion
 
@@ -71,8 +78,13 @@ namespace NControl.Controls
 		/// </summary>
 		public TabStripControl ()
 		{
-			_mainLayout = new RelativeLayout ();
-			Content = _mainLayout;
+			_mainLayout = new Grid();
+            _scrollPage = new ScrollView
+            {
+                Orientation = ScrollOrientation.Horizontal,
+                Content = _mainLayout
+            };
+			Content = _scrollPage;
 
 			// Create tab control
 			_buttonStack = new StackLayoutEx {
@@ -104,9 +116,7 @@ namespace NControl.Controls
 				}
 			};
 
-			_mainLayout.Children.Add (_tabControl, () => new Rectangle (
-				0, 0, _mainLayout.Width, TabHeight)
-			);
+			_mainLayout.Children.AddHorizontal(_tabControl);
 
 			// Create content control
 			_contentView = new Grid {
@@ -116,9 +126,7 @@ namespace NControl.Controls
 				BackgroundColor = Color.Transparent,
 			};
 
-			_mainLayout.Children.Add (_contentView, () => new Rectangle (
-				0, TabHeight, _mainLayout.Width, _mainLayout.Height-TabHeight)
-			);
+			_mainLayout.Children.AddHorizontal(_contentView);
 
 			_children.CollectionChanged += (sender, e) => {
 
@@ -151,8 +159,7 @@ namespace NControl.Controls
 				},
 			};
 
-			_mainLayout.Children.Add (border, () => new Rectangle(
-				0, TabHeight, _mainLayout.Width, 1));
+			_mainLayout.Children.AddHorizontal(border);
 
 			// Shadow
 			_shadow = new NControlView {				
@@ -165,8 +172,7 @@ namespace NControl.Controls
 				}
 			};
 
-			_mainLayout.Children.Add (_shadow, () => new Rectangle(
-				0, TabHeight, _mainLayout.Width, 6));
+			_mainLayout.Children.AddHorizontal(_shadow);
 
 			_shadow.IsVisible = false;
 
@@ -244,25 +250,33 @@ namespace NControl.Controls
 				TabActivated(this, idxOfNew);
 		}
 
-		/// <summary>
-		/// Toucheses the began.
-		/// </summary>
-		/// <param name="points">Points.</param>
-		public override bool TouchesBegan (IEnumerable<NGraphics.Point> points)
-		{
-			base.TouchesBegan(points);
+	    public override bool TouchesMoved (IEnumerable<NGraphics.Point> points)
+	    {
+	        base.TouchesMoved(points);
+            return HandleTouches(points, false);
+        }
 
-			return HandleTouches(points, false);
-		}
+        /// <summary>
+        /// Toucheses the began.
+        /// </summary>
+        /// <param name="points">Points.</param>
+        public override bool TouchesBegan(IEnumerable<NGraphics.Point> points)
+        {
+            base.TouchesBegan(points);
+            _startX = points.First().X;
+            _distanceX = _startX;            
+            return HandleTouches(points, false);
+        }
 
-		/// <summary>
-		/// Toucheses the ended.
-		/// </summary>
-		/// <returns><c>true</c>, if ended was touchesed, <c>false</c> otherwise.</returns>
-		/// <param name="points">Points.</param>
-		public override bool TouchesEnded (IEnumerable<NGraphics.Point> points)
+        /// <summary>
+        /// Toucheses the ended.
+        /// </summary>
+        /// <returns><c>true</c>, if ended was touchesed, <c>false</c> otherwise.</returns>
+        /// <param name="points">Points.</param>
+        public override bool TouchesEnded (IEnumerable<NGraphics.Point> points)
 		{
 			base.TouchesEnded (points);
+            _distanceX -= points.First().X;
 			return HandleTouches(points);
 		}
 
@@ -290,13 +304,18 @@ namespace NControl.Controls
 				if (p.X >= child.X && p.X <= child.X + child.Width && 
 					p.Y >= child.Y && p.Y <= child.Y + _tabControl.Height) {
 
-					if (activate)
+					if (activate && _startX != _distanceX)
 					{
 						var idx = _buttonStack.Children.IndexOf(child);
 						Activate(Children[idx], true);
 					}
 
-					return true;
+					    if (_startX!=_distanceX)
+					    {
+					        _scrollPage.ScrollToAsync(_startX+_distanceX,0,true);
+					    }
+
+					    return true;
 				}
 			}
 
@@ -312,16 +331,16 @@ namespace NControl.Controls
 		{
 			base.LayoutChildren (x, y, width, height);
 
-			if (width > 0 && !_inTransition) 
-			{
-				var existingChild = Children.FirstOrDefault (t => 
-					t.View == _contentView.Children.FirstOrDefault (v => v.IsVisible));
+			//if (width > 0 && !_inTransition) 
+			//{
+			//	var existingChild = Children.FirstOrDefault (t => 
+			//		t.View == _contentView.Children.FirstOrDefault (v => v.IsVisible));
 
-				var idxOfExisting = existingChild != null ? Children.IndexOf (existingChild) : -1;
+			//	var idxOfExisting = existingChild != null ? Children.IndexOf (existingChild) : -1;
 
-				_indicator.WidthRequest = _buttonStack.Children.ElementAt(idxOfExisting).Width;
-				_indicator.TranslationX = _buttonStack.Children.ElementAt(idxOfExisting).X;
-			}
+			//	_indicator.WidthRequest = _buttonStack.Children.ElementAt(idxOfExisting).Width;
+			//	_indicator.TranslationX = _buttonStack.Children.ElementAt(idxOfExisting).X;
+			//}
 		}
 
 		/// <summary>
@@ -697,20 +716,20 @@ namespace NControl.Controls
 		{
 			base.LayoutChildren (x, y, width, height);
 
-			var total = Children.Sum (t => t.Width);
-			var parentWidth = (Parent as View).Width;
+			//var total = Children.Sum (t => t.Width);
+			//var parentWidth = (Parent as View).Width;
 
-			if (total < parentWidth) {
+			//if (total < parentWidth) {
 
-				// We need more space
-				var diff = (parentWidth - total)/Children.Count;
+			//	// We need more space
+			//	var diff = (parentWidth - total)/Children.Count;
 
-				var xoffset = 0.0;
-				foreach (var child in Children) {
-					child.Layout (new Rectangle (child.X + xoffset, child.Y, child.Width + diff, child.Height));
-					xoffset += diff;
-				}
-			}
+			//	var xoffset = 0.0;
+			//	foreach (var child in Children) {
+			//		child.Layout (new Rectangle (child.X + xoffset, child.Y, child.Width + diff, child.Height));
+			//		xoffset += diff;
+			//	}
+			//}
 		}
 	}
 }

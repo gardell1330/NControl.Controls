@@ -18,8 +18,18 @@ namespace NControl.Controls.Demo.FormsApp
 				Children = {
 					new TabItem ("test 1", GetTabPage (Color.Green)),
 					new TabItem ("test 2", GetTabPage (Color.Red)),
-					new TabItem ("test 3", GetTabPage (Color.Blue))
-				},
+					new TabItem ("test 3", GetTabPage (Color.Blue)),
+                    new TabItem ("test 1", GetTabPage (Color.Green)),
+                    new TabItem ("test 2", GetTabPage (Color.Red)),
+                    new TabItem ("test 3", GetTabPage (Color.Blue)),
+                    new TabItem ("test 1", GetTabPage (Color.Green)),
+                    new TabItem ("test 2", GetTabPage (Color.Red)),
+                    new TabItem ("test 3", GetTabPage (Color.Blue)),
+                    new TabItem ("test 1", GetTabPage (Color.Green)),
+                    new TabItem ("test 2", GetTabPage (Color.Red)),
+                    new TabItem ("test 3", GetTabPage (Color.Blue))
+
+                },
 			};
 		}
 
